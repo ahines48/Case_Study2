@@ -2,44 +2,51 @@ Tp = .1;
 fb = 1/Tp;
 dt = Tp/50;
 %t = -Tp:dt:Tp;
-t = 0:.01:2;
-p = 1 - abs(t)/Tp;
-P = fftshift(fft(p)/length(p));
-x = sinc(fb*pi*(t-1));
-x(t == 1) = 1;
-X = fftshift(fft(x) / length(x));
+t = 0:.01:2; %define time vector
+triangle = 1-abs(t)/Tp; %define a triangular pulse shape
+triangle_fft = fftshift(fft(triangle)/length(triangle)); %take fft of triangle
+sinc = sinc(fb*pi*(t-1)); %define truncated sin function
+sinc(t == 1) = 1;
+sinc_fft = fftshift(fft(sinc) / length(sinc));
+beta=0;
+raised_cos_fft= 0.5*
 
 disp(['Bit Rate: ', num2str(fb), ' bps']);
 
 figure;
-plot(t, p);
+plot(t, triangle);
 title('Signal p(t)');
 xlabel('t');
 ylabel('x[n]');
 
 figure;
 subplot(2,1,1);
-plot(t, abs(P));
+plot(t, abs(triangle_fft));
 title('Magnitude of P(jw)');
 xlabel('k');
 ylabel('P(jw)');
 
 subplot(2,1,2);
-plot(t, angle(P));
+plot(t, angle(triangle_fft));
 title('Phase of P(jw)');
 xlabel('k');
 ylabel('Phase(a_k) [radians]');
 
+figure 
+plot(t,sinc)
+title('truncated sinc function')
+xlabel('time')
+
 figure;
 subplot(2,1,1);
-plot(t, abs(X));
-title('Magnitude of X(jw)');
+plot(t, abs(sinc_fft));
+title('Magnitude of truncated sinc fft');
 xlabel('k');
 ylabel('P(jw)');
 
 subplot(2,1,2);
-plot(t, angle(X));
-title('Phase of X(jw)');
+plot(t, angle(sinc_fft));
+title('Phase of truncated sinc fft');
 xlabel('k');
 ylabel('Phase(a_k) [radians]');
 
@@ -48,7 +55,7 @@ sigma_values = 0:0.1:1;
 BER_sign_values = zeros(1, length(sigma_values));
 BER_matched_values = zeros(1, length(sigma_values));
 SNR_values = zeros(1, length(sigma_values));
-
+N=10;
 for i = 1:length(sigma_values)
     sigma = sigma_values(i);
 
