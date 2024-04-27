@@ -8,8 +8,7 @@ triangle_fft = fftshift(fft(triangle)/length(triangle)); %take fft of triangle
 sinc = sinc(fb*pi*(t-1)); %define truncated sin function
 sinc(t == 1) = 1;
 sinc_fft = fftshift(fft(sinc) / length(sinc));
-beta=0;
-raised_cos_fft= 0.5*
+
 
 disp(['Bit Rate: ', num2str(fb), ' bps']);
 
