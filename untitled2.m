@@ -13,3 +13,26 @@ subplot(2,1,2), plot(f,abs(fftshift((fft(x,Nfft)))))
 xlabel('frequency (Hz)'), ylabel('|X(j\omega)|')
 
 figure, plot(f,angle(fftshift((fft(x,Nfft)))))
+
+%% modulated sinc
+wc = 2*pi*20; % 20Hz modulation
+y = x.*cos(wc*t);
+figure
+subplot(2,1,1), plot(t,y)
+xlabel('time (s)'), ylabel('y(t)'), title('Modulated sinc')
+fs = 1/dt; % sample frequency
+Nfft = 1024; % length of fft
+f = [0:fs/Nfft:fs-fs/Nfft];
+subplot(2,1,2), plot(f,abs(fft(y,Nfft)))
+xlabel('frequency (Hz)'), ylabel('|Y(j\omega)|')
+%% demodulated
+xr = y.*cos(wc*t);
+figure
+subplot(2,1,1), plot(t,xr)
+xlabel('time (s)'), ylabel('x_r(t)'), title('Demod (without LPF)')
+fs = 1/dt; % sample frequency
+Nfft = 1024; % length of fft
+f = [0:fs/Nfft:fs-fs/Nfft];
+subplot(2,1,2), plot(f,abs(fft(xr,Nfft)))
+xlabel('frequency (Hz)'), ylabel('|X_r(j\omega)|')
+% then LPF, e.g., lowpass()
