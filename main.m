@@ -9,14 +9,12 @@ bw=1;
 dt=0.005; %define sampleing rate
 t=-Ts*5:dt:Ts*5; %define time vector from 0 to T
 fs=1/dt;
-N = 1024;
-beta = 1;
+N = 1024; %FFT length
+beta = .5; %Rolloff for Raised Cosine
 
-triangle=1-abs(t)/Ts;%define the shape of the output vector; %define a triangular pulse shape
-triangle_fft = fftshift(fft(triangle)/length(triangle)); %take fft of triangle
-raisCos_1 = sinc(t/Ts).*(cos(pi*beta*t/Ts)./(1-(2*beta*t/Ts).^2));
-raisCos_1(t == Ts/(2*beta) | t == -Ts/(2*beta)) = pi/4*sinc(1/(2*beta));
-raisCos_1 = raisCos_1.*cos(2*pi*10*t);
+raisCos_1 = sinc(t/Ts).*(cos(pi*beta*t/Ts)./(1-(2*beta*t/Ts).^2)); %define raised cos
+raisCos_1(t == Ts/(2*beta) | t == -Ts/(2*beta)) = pi/4*sinc(1/(2*beta)); %Deal with 0
+raisCos_1 = raisCos_1.*cos(2*pi*10*t); %Define shift
 raisCos_2 = sinc(t/Ts).*(cos(pi*beta*t/Ts)./(1-(2*beta*t/Ts).^2));
 raisCos_2(t == Ts/(2*beta) | t == -Ts/(2*beta)) = pi/4*sinc(1/(2*beta));
 raisCos_2 = raisCos_2.*cos(2*pi*20*t);
@@ -295,13 +293,15 @@ function message_out = communication(pt,message1,pt2,message2,pt3,message3,sigma
     xlabel(sprintf('bits, error rate = %0.3f',error_rate))
     
     %calculate the SNR of the system 
-    %{
+
     signal_power = sum(y_t.^2);
     noise_power = sum(noise.^2);
     SNR = signal_power / noise_power;
-    
-    disp(['SNR 10Hz =',num2str(SNR)])
+    SNR_dB = 10 * log10(signal_power / noise_power); % SNR in decibels
+
+   
+    disp(['SNR 10Hz =',num2str(SNR_dB)])
     disp(['bit rate 10Hz =',num2str(fb)])
     disp(['standard deviation of noise 10Hz =',num2str(sigma)])
-    %}
+
 end
