@@ -1,248 +1,307 @@
-Tp = .1;
-fb = 1/Tp;
-dt = Tp/50;
-%t = -Tp:dt:Tp;
-t = 0:.01:2; %define time vector
-triangle = 1-abs(t)/Tp; %define a triangular pulse shape
+%% Case study 2
+%% Introduction
+% * Author:                   Amelia Hines and Dayan Parker
+% * Class:                    ESE 351
+% * Date:                     Created 4/5/2024, Last Edited 4/5/2024
+%% create pulse shapes
+Ts=0.1; %define period in miliseconds
+bw=1;
+dt=0.005; %define sampleing rate
+t=-Ts*5:dt:Ts*5; %define time vector from 0 to T
+fs=1/dt;
+N = 1024;
+beta = 1;
+
+triangle=1-abs(t)/Ts;%define the shape of the output vector; %define a triangular pulse shape
 triangle_fft = fftshift(fft(triangle)/length(triangle)); %take fft of triangle
-sinc = sinc(fb*pi*(t-1)); %define truncated sin function
-sinc(t == 1) = 1;
-sinc_fft = fftshift(fft(sinc) / length(sinc));
-
-
-disp(['Bit Rate: ', num2str(fb), ' bps']);
-
-figure;
-plot(t, triangle);
-title('Signal p(t)');
-xlabel('t');
-ylabel('x[n]');
-
-figure;
-subplot(2,1,1);
-plot(t, abs(triangle_fft));
-title('Magnitude of P(jw)');
-xlabel('k');
-ylabel('P(jw)');
-
-subplot(2,1,2);
-plot(t, angle(triangle_fft));
-title('Phase of P(jw)');
-xlabel('k');
-ylabel('Phase(a_k) [radians]');
+raisCos_1 = sinc(t/Ts).*(cos(pi*beta*t/Ts)./(1-(2*beta*t/Ts).^2));
+raisCos_1(t == Ts/(2*beta) | t == -Ts/(2*beta)) = pi/4*sinc(1/(2*beta));
+raisCos_1 = raisCos_1.*cos(2*pi*10*t);
+raisCos_2 = sinc(t/Ts).*(cos(pi*beta*t/Ts)./(1-(2*beta*t/Ts).^2));
+raisCos_2(t == Ts/(2*beta) | t == -Ts/(2*beta)) = pi/4*sinc(1/(2*beta));
+raisCos_2 = raisCos_2.*cos(2*pi*20*t);
+raisCos_3 = sinc(t/Ts).*(cos(pi*beta*t/Ts)./(1-(2*beta*t/Ts).^2));
+raisCos_3(t == Ts/(2*beta) | t == -Ts/(2*beta)) = pi/4*sinc(1/(2*beta));
+raisCos_3 = raisCos_3.*cos(2*pi*30*t);
+sinc_1=sinc(t/Ts).*cos(2*pi*10*t); %define truncated sin function
+sinc_2=sinc(t/Ts).*cos(2*pi*20*t); %define shifted truncated sin function
+sinc_3=sinc(t/Ts).*cos(2*pi*30*t); %define shifted sinc
 
 figure 
-plot(t,sinc)
-title('truncated sinc function')
-xlabel('time')
+plot(t,sinc_1), title ("Truncated Sinc Shape"),  xlabel('time (seconds)')
+grid on
 
-figure;
-subplot(2,1,1);
-plot(t, abs(sinc_fft));
-title('Magnitude of truncated sinc fft');
-xlabel('k');
-ylabel('P(jw)');
+figure 
+plot(t,raisCos_1), title ("Raised Cos Shape"),  xlabel('time (seconds)')
+grid on
 
-subplot(2,1,2);
-plot(t, angle(sinc_fft));
-title('Phase of truncated sinc fft');
-xlabel('k');
-ylabel('Phase(a_k) [radians]');
+%10Hz
+sinc_jw = fftshift(fft(sinc_1,N)); %take the fft of p(t)
+rcos_jw1 =  fftshift(fft(raisCos_1,N));
+f = 0:(fs/bw)/fftL:(fs/bw)-(fs/bw)/N;
+%plot the frequnecy response of p(t)
+figure
+title('P(\omega): Truncated Sinc (10Hz)')
+subplot(3,1,1), plot(f,abs(sinc_jw)), title('Magnitude of P(\omega)')
+xlabel('frequnecy (Hz)')
 
-%Range of Sigmas analyzed
-sigma_values = 0:0.1:1; 
-BER_sign_values = zeros(1, length(sigma_values));
-BER_matched_values = zeros(1, length(sigma_values));
-SNR_values = zeros(1, length(sigma_values));
-N=10;
-for i = 1:length(sigma_values)
-    sigma = sigma_values(i);
+subplot(3,1,2), plot(f,angle(sinc_jw)), title('Phase of P(\omega)')
+xlabel('frequnecy (Hz)')
 
-    % Generate binary message
-    b = 2*(rand(1, N) > 0.5) - 1; 
-    b_up = zeros(1, N*upsample_factor); 
-    b_up(1:upsample_factor:end) = b; 
-    y1 = conv(b_up, p);
-    y2 = conv(b_up, x);
+subplot(3,1,3), spectrogram(sinc_jw), title('Spectrogram of P(\omega)')
 
-    % Add noise
-    noise = sigma * randn(1, length(y));
-    r1 = y1 + noise;
-    r2 = y2 + noise;
+figure
+title('P(\omega): Raised Cosine (10Hz)')
+subplot(3,1,1), plot(f,abs(rcos_jw1)), title('Magnitude of P(\omega)')
+xlabel('frequnecy (Hz)')
 
-    % Calculate SNR
-    Py1 = sum(y1.^2) / length(y1);
-    Py2 = sum(y2.^2) / length(y2);
+subplot(3,1,2), plot(f,angle(rcos_jw1)), title('Phase of P(\omega)')
+xlabel('frequnecy (Hz)')
 
-    Pn = sum(noise.^2) / length(noise);
-    SNR1 = 10 * log10(Py1 / Pn);
-    SNR2 = 10 * log10(Py2 / Pn);
-    SNR1_values(i) = SNR1;
-    SNR2_values(i) = SNR2;
+subplot(3,1,3), spectrogram(rcos_jw1), title('Spectrogram of P(\omega)')
 
-    %Sign Based Reciever
-    midpoints = 1:upsample_factor:length(r)-1;
-    downsampled_r = r(midpoints);
-    message = double(downsampled_r > 0);
-    message(message == 0) = -1;
-    message = message(2:N+1);
-    original_message = b;
+%20 Hz
+sinc_jw2 = fftshift(fft(sinc_2,fftL)); %take the fft of p(t)
+rcos_jw2 =  fftshift(fft(raisCos_2,N));
 
-    decoded_message_sign = message;
-    errors_sign = sum(decoded_message_sign ~= original_message);
-    BER_sign = errors_sign / N;
+figure
+title('P(\omega): Truncated Sinc (20Hz)')
+subplot(3,1,1), plot(f,abs(sinc_jw2)), title('Magnitude of P(\omega)')
+xlabel('frequnecty (Hz)')
+
+subplot(3,1,2), plot(f,angle(sinc_jw2)), title('Phase of P(\omega)')
+xlabel('frequnecty (Hz)')
+
+subplot(3,1,3), spectrogram(sinc_jw2), title('Spectrogram of P(\omega)')
+
+figure
+title('P(\omega): Raised Cosine (20Hz)')
+subplot(3,1,1), plot(f,abs(rcos_jw2)), title('Magnitude of P(\omega)')
+xlabel('frequnecy (Hz)')
+
+subplot(3,1,2), plot(f,angle(rcos_jw2)), title('Phase of P(\omega)')
+xlabel('frequnecy (Hz)')
+
+subplot(3,1,3), spectrogram(rcos_jw2), title('Spectrogram of P(\omega)')
+
+%30 Hz
+sinc_jw3 = fftshift(fft(sinc_3,fftL)); %take the fft of p(t)
+rcos_jw3 =  fftshift(fft(raisCos_3,N));
+
+figure
+subplot(3,1,1), plot(f,abs(sinc_jw3)), title('Magnitude of P(\omega)')
+xlabel('frequnecty (Hz)')
+
+subplot(3,1,2), plot(f,angle(sinc_jw3)), title('Phase of P(\omega)')
+xlabel('frequnecty (Hz)')
+
+subplot(3,1,3), spectrogram(sinc_jw3), title('Spectrogram of P(\omega)')
+%the band width need to for communications with this shape is pi/25 radians
+figure
+title('P(\omega): Raised Cosine (30Hz)')
+subplot(3,1,1), plot(f,abs(rcos_jw3)), title('Magnitude of P(\omega)')
+xlabel('frequnecy (Hz)')
+
+subplot(3,1,2), plot(f,angle(rcos_jw3)), title('Phase of P(\omega)')
+xlabel('frequnecy (Hz)')
+
+subplot(3,1,3), spectrogram(rcos_jw3), title('Spectrogram of P(\omega)')
+%combine plot
+figure
+plot(f,abs(sinc_jw)), hold on
+plot(f,abs(sinc_jw2)),plot(f,abs(sinc_jw3))
+hold off
+legend('10Hz', '20Hz', '30Hz')
+title('magnitude of P(\omega)')
+xlabel('frequnecty (Hz)')
+
+figure
+plot(f,abs(rcos_jw1)), hold on
+plot(f,abs(rcos_jw2)),plot(f,abs(rcos_jw3))
+hold off
+legend('10Hz', '20Hz', '30Hz')
+title('magnitude of P(\omega)')
+xlabel('frequnecty (Hz)')
+%%
+message10 = 'I love ESE 351! :)'; 
+message20 = 'I love Jason Trobuagh';
+message30 = 'take me...';
+
+communication_fullSinc = communication(sinc_1,message10,sinc_2,message20,sinc_3,message30,0.5);
+communication_fullRCos = communication(raisCos_1,message10,raisCos_2,message20,raisCos_3,message30,0.5);
+
+disp(['10Hz message: ',communication_fullSinc{1}])
+disp(['20Hz message: ',communication_fullSinc{2}])
+disp(['30Hz message: ',communication_fullSinc{3}])
+
+disp(['10Hz message: ',communication_fullRCos{1}])
+disp(['20Hz message: ',communication_fullRCos{2}])
+disp(['30Hz message: ',communication_fullRCos{3}])
+%%
+function message_out = communication(pt,message1,pt2,message2,pt3,message3,sigma)
+    Ts=0.1; %define period in miliseconds
+    dt=0.01; %define sampleing rate
+    t=-Ts*5:dt:Ts*5; %define time vector from 0 to T
+    fs=1/dt;
+
+    fb=1/(Ts); %create bit rate vector
+    upscale=100; %use the length of p(t) to idenitfy the number of zeros 
+    % needed to get the full convoltuion y(t)
     
-    %Matched Filter
-    p_rev = 1 - abs(-t)/Tp;
-    z = conv(r, p_rev);
-    indices = 1:upsample_factor:length(z)-1;
-    downsampled_z = z(indices);
-    msg = double(downsampled_z > 0);
-    msg(msg == 0) = -1;
-    msg = msg(3:N+2);
-    decoded_message_matched = msg;
-    errors_matched = sum(decoded_message_matched ~= original_message);
-    BER_matched = errors_matched / N;
 
-    % Store BER values
-    BER_sign_values(i) = BER_sign; 
-    BER_matched_values(i) = BER_matched;
+    %convert messages to binary
+    x_t10 = str2num(reshape(dec2bin(message1)',1,[])')';
+    x_t10(x_t10 == 0) = -1; 
+
+    x_t20 = str2num(reshape(dec2bin(message2)',1,[])')';
+    x_t20(x_t20 == 0) = -1;
+
+    x_t30 = str2num(reshape(dec2bin(message3)',1,[])')';
+    x_t30(x_t30 == 0) = -1;
+
+    scaled_x10 = zeros(1, numel(x_t10)*upscale);
+    length_scaled_10=length(scaled_x10);
+    scaled_x20 = zeros(1, numel(x_t20)*upscale);
+    length_scaled_20=length(scaled_x20);
+    scaled_x30 = zeros(1, numel(x_t30)*upscale);
+    length_scaled_30=length(scaled_x30);
+
+    % Insert bit values into the result vector with upsacle zeros in between each value
+    scaled_x10(1:100:end) = x_t10;
+    scaled_x20(1:100:end) = x_t20;
+    scaled_x30(1:100:end) = x_t30;
+
+    %convolute eache scaled signal vecotor with the corrisponding pulse
+    %shape
+    y_t10=conv(scaled_x10,pt,'same');
+    y_t20=conv(scaled_x20,pt2,'same');
+    y_t30=conv(scaled_x30,pt3,'same');
+
+    %pad the vectors with zeros to be the same legnth
+    scaled_vector=[length(y_t10),length(y_t20),length(y_t30)];
+    max_scale=max(scaled_vector);
+
+    y_t10=[y_t10,zeros(1,max_scale-length(y_t10))];
+    y_t20=[y_t20,zeros(1,max_scale-length(y_t20))];
+    y_t30=[y_t30,zeros(1,max_scale-length(y_t30))];
+
+    y_t=y_t10+y_t20+y_t30; %add the seperate signals together
+
+    noise_time=0:dt:(length(y_t)-1)*dt;%defin a time vector for r(t) and y(t)
+    figure, plot(noise_time,y_t), title('orignal data')
+
+    noise=sigma.^2*randn(1,length(y_t)); %create noise vector
+    r_t=noise+y_t; %create return signals
+    figure, plot(noise_time,r_t), title('noisy data at')
+
+    time=0:length(r_t)-1;
+
+    %matched filter
+    %convolute the noisy data with the opposite of the time vector
+    p_opposite_10=pt(end:-1:1);
+    z_t10=filter(p_opposite_10,1,r_t.*cos(2*pi*time*10));
+    z_t10=z_t10(1,1:length_scaled_10);
+
+    p_opposite_20=pt2(end:-1:1);
+    z_t20=filter(p_opposite_20,1,r_t.*cos(2*pi*20*time));
+    z_t20=z_t20(1,1:length_scaled_20);
+    p_opposite_30=pt3(end:-1:1);
+    z_t30=filter(p_opposite_30,1,r_t.*cos(2*pi*30*time));
+    z_t30=z_t30(1,1:length_scaled_30);
+
+    %create a binary output
+    output_match10=zeros(1,length(x_t10));
+    output_match10(z_t10(upscale:upscale:end)<0)=-1;
+    output_match10(z_t10(upscale:upscale:end)>0)=1;
+    message_output10=output_match10;
+    message_output10(output_match10==-1)=0;
+    message_out10 = char(bin2dec(num2str(reshape(message_output10,7,[])')))';
+
+    output_match20=zeros(1,length(x_t10)-1);
+    output_match20(z_t20(upscale:upscale:end)<0)=-1;
+    output_match20(z_t20(upscale:upscale:end)>0)=1;
+    message_output20=output_match20;
+    message_output20(output_match20==-1)=0;
+    message_out20 = char(bin2dec(num2str(reshape(message_output20,7,[])')))';
+
+    output_match30=zeros(1,length(x_t30)-1);
+    output_match30(z_t30(upscale:upscale:end)<0)=-1;
+    output_match30(z_t30(upscale:upscale:end)>0)=1;
+    message_output30=output_match30;
+    message_output30(output_match30==-1)=0;
+    message_out30 = char(bin2dec(num2str(reshape(message_output30,7,[])')))';
+    
+    message_out=cell(3,1);
+    message_out{1}=message_out10;
+    message_out{2}=message_out20;
+    message_out{3}=message_out30;
+
+
+    %10 Hz plot
+    diff_idx=find(output_match10~=x_t10);
+    same_idx=find(output_match10==x_t10);
+    error_rate=length(diff_idx)/length(x_t10); %define error rate
+    
+    figure
+    subplot(2,1,1)
+    stem(same_idx,output_match10(same_idx), 'bo'); 
+    hold on; 
+    % Plot p_t where p_t is different from x_t
+    stem(diff_idx, output_match10(diff_idx), 'rx');  % Plot p_t where it is different from x_t with red x marks
+    title('Output of the match reciver at 10 Hz')
+    xlabel('bits')
+    hold off; % Release the hold on the plot
+    legend('x_t', 'p_t different from x_t');
+    
+    subplot(2,1,2), stem(x_t10), title('orignal signal')%plot orignal signal
+    xlabel(sprintf('bits, error rate = %0.3f',error_rate))
+    
+    %20 Hz plot
+    diff_idx=find(output_match20~=x_t20);
+    same_idx=find(output_match20==x_t20);
+    error_rate=length(diff_idx)/length(x_t20); %define error rate
+    
+    figure
+    subplot(2,1,1)
+    stem(same_idx,output_match20(same_idx), 'bo'); 
+    hold on; 
+    % Plot p_t where p_t is different from x_t
+    stem(diff_idx, output_match20(diff_idx), 'rx');  % Plot p_t where it is different from x_t with red x marks
+    title('Output of the match reciver at 20 Hz')
+    xlabel('bits')
+    hold off; % Release the hold on the plot
+    legend('x_t', 'p_t different from x_t');
+    
+    subplot(2,1,2), stem(x_t20), title('orignal signal')%plot orignal signal
+    xlabel(sprintf('bits, error rate = %0.3f',error_rate))
+    
+    %30 Hz plot
+    diff_idx=find(output_match30~=x_t30);
+    same_idx=find(output_match30==x_t30);
+    error_rate=length(diff_idx)/length(x_t30); %define error rate
+    
+    figure
+    subplot(2,1,1)
+    stem(same_idx,output_match30(same_idx), 'bo'); 
+    hold on; 
+    % Plot p_t where p_t is different from x_t
+    stem(diff_idx, output_match30(diff_idx), 'rx');  % Plot p_t where it is different from x_t with red x marks
+    title('Output of the match reciver at 30 Hz')
+    xlabel('bits')
+    hold off; % Release the hold on the plot
+    legend('x_t', 'p_t different from x_t');
+    
+    subplot(2,1,2), stem(x_t30), title('orignal signal')%plot orignal signal
+    xlabel(sprintf('bits, error rate = %0.3f',error_rate))
+    
+    %calculate the SNR of the system 
+    %{
+    signal_power = sum(y_t.^2);
+    noise_power = sum(noise.^2);
+    SNR = signal_power / noise_power;
+    
+    disp(['SNR 10Hz =',num2str(SNR)])
+    disp(['bit rate 10Hz =',num2str(fb)])
+    disp(['standard deviation of noise 10Hz =',num2str(sigma)])
+    %}
 end
-
-% Plot BER vs. SNR
-figure;
-plot(SNR1_values, BER_sign_values, '-o', SNR_values, BER_matched_values, '-x');
-legend('Sign-Based Receiver', 'Matched Filter');
-xlabel('SNR (dB)');
-ylabel('Bit Error Rate (BER)');
-title('BER vs. SNR');
-grid on;
-
-figure;
-plot(SNR2_values, BER_sign_values, '-o', SNR_values, BER_matched_values, '-x');
-legend('Sign-Based Receiver', 'Matched Filter');
-xlabel('SNR (dB)');
-ylabel('Bit Error Rate (BER)');
-title('BER vs. SNR');
-grid on;
-%% Binary Message Bull
-b_up = zeros(1, N*upsample_factor); 
-b_up(1:upsample_factor:end) = b; 
-y1 = conv(b_up, p);
-y2 = conv(b_up, x);
-t_plot = 0:dt:(length(y)-1)*dt;
-
-figure;
-plot(t_plot, y1, 'LineWidth', 2);
-title('Y');
-xlabel('t');
-ylabel('t');
-
-%% Noise Shit
-sigma = 1;
-noise = sigma * randn(1, length(y1));
-r1 = y1 + noise;
-r2 = y2 + noise;
-
-figure;
-plot(t_plot, r1, 'LineWidth', 2);
-xlabel('Time (s)');
-ylabel('Amplitude');
-title('Received Signal r(t)');
-grid on; 
-
-figure;
-plot(t_plot, r2, 'LineWidth', 2);
-xlabel('Time (s)');
-ylabel('Amplitude');
-title('Received Signal r(t)');
-grid on; 
-
-%% Decode that shit
-start_index = round(upsample_factor/2);
-%generate samples in middle of upsamplped periods
-
-%Sign Based Reciever
-midpoints1 = 1:upsample_factor:length(r1)-1;
-midpoints2 = 1:upsample_factor:length(r2)-1;
-downsampled_r1 = r1(midpoints1);
-downsampled_r2 = r2(midpoints2);
-message1 = double(downsampled_r1 > 0);
-message2 = double(downsampled_r2 > 0);
-message1(message1 == 0) = -1;
-message1 = message1(2:N+1);
-message2(message2 == 0) = -1;
-message2 = message2(2:N+1);
-disp(message1);
-disp(message2);
-
-%Matched Filter
-p_rev = 1 - abs(-t)/Tp;
-x_rev = sinc(fb*pi*(t-1));
-z1 = conv(r, p_rev);
-z2 = conv(r, x_rev);
-z1_plot = 0:length(z1)-1;
-z2_plot = 0:length(z2)-1;
-
-figure;
-plot(z1_plot, z1, 'LineWidth', 2);
-xlabel('Time (s)');
-ylabel('Amplitude');
-title('Matched Filter Function');
-grid on; 
-
-figure;
-plot(z2_plot, z2, 'LineWidth', 2);
-xlabel('Time (s)');
-ylabel('Amplitude');
-title('Matched Filter Function');
-grid on; 
-
-indices1 = 1:upsample_factor:length(z1)-1;
-indices2 = 1:upsample_factor:length(z2)-1;
-
-downsampled_z1 = z1(indices1);
-downsampled_z2 = z2(indices2);
-
-msg1 = double(downsampled_z1 > 0);
-msg2 = double(downsampled_z2 > 0);
-msg1(msg1 == 0) = -1;
-msg2(msg2 == 0) = -1;
-msg1 = msg1(3:N+2);
-msg2 = msg2(3:N+2);
-disp(msg1);
-disp(msg2);
-%%Analysis
-Py1 = sum(y1.^2) / length(y1);
-Py2 = sum(y2.^2) / length(y2);
-Pn = sum(noise.^2) / length(noise);
-SNR1 = 10 * log10(Py1 / Pn);
-SNR2 = 10 * log10(Py2 / Pn);
-disp(['SNR (dB) Triangle: ', num2str(SNR1)]);
-disp(['SNR (dB) Sinc: ', num2str(SNR2)]);
-
-original_message = b;
-disp(['Original Message: ', num2str(original_message)])
-decoded_message1_sign = message1;
-decoded_message2_sign = message2;
-errors_sign1 = sum(decoded_message1_sign ~= original_message);
-errors_sign2 = sum(decoded_message2_sign ~= original_message);
-BER_sign1 = errors_sign1 / N;
-BER_sign2 = errors_sign2 / N;
-
-disp(['BER (Sign-Based Receiver) Triangle: ', num2str(BER_sign1)]);
-disp(['BER (Sign-Based Receiver) Sinc: ', num2str(BER_sign2)]);
-
-decoded_message1_matched = msg1;
-decoded_message2_matched = msg2;
-errors_matched1 = sum(decoded_message1_matched ~= original_message);
-errors_matched2 = sum(decoded_message2_matched ~= original_message);
-BER_matched1 = errors_matched1 / N;
-BER_matched2 = errors_matched2 / N;
-
-disp(['BER (Matched Filter) Triangle: ', num2str(BER_matched1)]);
-disp(['BER (Matched Filter) Sinc: ', num2str(BER_matched2)]);
-
-%% NOTE PLEASE READ
-%Displayed values are printed along the code
-
