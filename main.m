@@ -122,8 +122,8 @@ title('magnitude of P(\omega)')
 xlabel('frequnecty (Hz)')
 %%
 message10 = 'I love ESE 351! :)'; 
-message20 = 'I love Jason Trobuagh';
-message30 = 'take me...';
+message20 = 'I love Jason Trobaugh';
+message30 = 'I wish I was a LP Filter';
 
 communication_fullSinc = communication(sinc_1,message10,sinc_2,message20,sinc_3,message30,0.5);
 communication_fullRCos = communication(raisCos_1,message10,raisCos_2,message20,raisCos_3,message30,0.5);
