@@ -16,6 +16,18 @@ sinc_1=sinc(t/Ts).*cos(2*pi*10*t); %define truncated sin function
 sinc_2=sinc(t/Ts).*cos(2*pi*20*t); %define shifted truncated sin function
 sinc_3=sinc(t/Ts).*cos(2*pi*30*t); %define shifted sinc
 
+beta = .5; %Rolloff for Raised Cosine
+
+raisCos_1 = sinc(t/Ts).*(cos(pi*beta*t/Ts)./(1-(2*beta*t/Ts).^2)); %define raised cos
+raisCos_1(t == Ts/(2*beta) | t == -Ts/(2*beta)) = pi/4*sinc(1/(2*beta)); %Deal with 0
+raisCos_1 = raisCos_1.*cos(2*pi*10*t); %Define shift
+raisCos_2 = sinc(t/Ts).*(cos(pi*beta*t/Ts)./(1-(2*beta*t/Ts).^2));
+raisCos_2(t == Ts/(2*beta) | t == -Ts/(2*beta)) = pi/4*sinc(1/(2*beta));
+raisCos_2 = raisCos_2.*cos(2*pi*20*t);
+raisCos_3 = sinc(t/Ts).*(cos(pi*beta*t/Ts)./(1-(2*beta*t/Ts).^2));
+raisCos_3(t == Ts/(2*beta) | t == -Ts/(2*beta)) = pi/4*sinc(1/(2*beta));
+raisCos_3 = raisCos_3.*cos(2*pi*30*t);
+
 figure 
 plot(t,sinc_1), title ("truncated sin shape"),  xlabel('time (seconds)')
 grid on
@@ -70,14 +82,37 @@ message10 = 'I love ESE 351! :)';
 message20 = 'I love Jason Trobuagh';
 message30 = 'take me...';
 
-communication_full = communication(sinc_1,message10,sinc_2,message20,sinc_3,message30,0.5);
+[communication_full,error] = communication(sinc_1,message10,sinc_2,message20,sinc_3,message30,1);
 
 disp(['10Hz message: ',communication_full{1}])
+disp(sprintf('10 Hz Error Rate: %d',error(1)))
 disp(['20Hz message: ',communication_full{2}])
+disp(sprintf('10 Hz Error Rate: %d',error(2)))
 disp(['30Hz message: ',communication_full{3}])
+disp(sprintf('10 Hz Error Rate: %d',error(3)))
+
+
+smeg=0:0.2:1;
+error_10=zeros(1,5);
+error_20=zeros(1,5);
+error_30=zeros(1,5);
+
+for i=1:length(smeg)
+    [communication_full,error] = communication(sinc_1,message10,sinc_2,message20,sinc_3,message30,smeg(i));
+    error_10(1,i)=error(1);
+    error_20(1,i)=error(2);
+    error_30(1,i)=error(3);
+end
+
+for i=1:length(smeg)
+    [communication_full,error] = communication(raisCos_1,message10,raisCos_2,message20,raisCos_3,message30,smeg(i));
+    error_10(1,i)=error(1);
+    error_20(1,i)=error(2);
+    error_30(1,i)=error(3);
+end
 
 %%
-function message_out = communication(pt,message1,pt2,message2,pt3,message3,sigma)
+function [message_out,error_rate] = communication(pt,message1,pt2,message2,pt3,message3,sigma)
     Ts=0.1; %define period in miliseconds
     dt=0.01; %define sampleing rate
     t=-Ts*5:dt:Ts*5; %define time vector from 0 to T
@@ -179,7 +214,7 @@ function message_out = communication(pt,message1,pt2,message2,pt3,message3,sigma
     %10 Hz plot
     diff_idx=find(output_match10~=x_t10);
     same_idx=find(output_match10==x_t10);
-    error_rate=length(diff_idx)/length(x_t10); %define error rate
+    error_rate10=length(diff_idx)/length(x_t10); %define error rate
     
     figure
     subplot(2,1,1)
@@ -193,12 +228,12 @@ function message_out = communication(pt,message1,pt2,message2,pt3,message3,sigma
     legend('x_t', 'p_t different from x_t');
     
     subplot(2,1,2), stem(x_t10), title('orignal signal')%plot orignal signal
-    xlabel(sprintf('bits, error rate = %0.3f',error_rate))
+    xlabel(sprintf('bits, error rate = %0.3f',error_rate10))
     
     %20 Hz plot
     diff_idx=find(output_match20~=x_t20);
     same_idx=find(output_match20==x_t20);
-    error_rate=length(diff_idx)/length(x_t20); %define error rate
+    error_rate20=length(diff_idx)/length(x_t20); %define error rate
     
     figure
     subplot(2,1,1)
@@ -212,12 +247,12 @@ function message_out = communication(pt,message1,pt2,message2,pt3,message3,sigma
     legend('x_t', 'p_t different from x_t');
     
     subplot(2,1,2), stem(x_t20), title('orignal signal')%plot orignal signal
-    xlabel(sprintf('bits, error rate = %0.3f',error_rate))
+    xlabel(sprintf('bits, error rate = %0.3f',error_rate20))
     
     %30 Hz plot
     diff_idx=find(output_match30~=x_t30);
     same_idx=find(output_match30==x_t30);
-    error_rate=length(diff_idx)/length(x_t30); %define error rate
+    error_rate30=length(diff_idx)/length(x_t30); %define error rate
     
     figure
     subplot(2,1,1)
@@ -231,8 +266,9 @@ function message_out = communication(pt,message1,pt2,message2,pt3,message3,sigma
     legend('x_t', 'p_t different from x_t');
     
     subplot(2,1,2), stem(x_t30), title('orignal signal')%plot orignal signal
-    xlabel(sprintf('bits, error rate = %0.3f',error_rate))
+    xlabel(sprintf('bits, error rate = %0.3f',error_rate30))
     
+    error_rate=[error_rate10,error_rate20,error_rate30];
     %calculate the SNR of the system 
     %{
     signal_power = sum(y_t.^2);
