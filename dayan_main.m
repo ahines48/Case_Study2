@@ -16,7 +16,7 @@ sinc_1=sinc(t/Ts).*cos(2*pi*10*t); %define truncated sin function
 sinc_2=sinc(t/Ts).*cos(2*pi*20*t); %define shifted truncated sin function
 sinc_3=sinc(t/Ts).*cos(2*pi*30*t); %define shifted sinc
 
-beta = .5; %Rolloff for Raised Cosine
+beta = 0.5; %Rolloff for Raised Cosine
 
 raisCos_1 = sinc(t/Ts).*(cos(pi*beta*t/Ts)./(1-(2*beta*t/Ts).^2)); %define raised cos
 raisCos_1(t == Ts/(2*beta) | t == -Ts/(2*beta)) = pi/4*sinc(1/(2*beta)); %Deal with 0
@@ -104,12 +104,24 @@ for i=1:length(smeg)
     error_30(1,i)=error(3);
 end
 
+error_10_cos=zeros(1,5);
+error_20_cos=zeros(1,5);
+error_30_cos=zeros(1,5);
 for i=1:length(smeg)
     [communication_full,error] = communication(raisCos_1,message10,raisCos_2,message20,raisCos_3,message30,smeg(i));
-    error_10(1,i)=error(1);
-    error_20(1,i)=error(2);
-    error_30(1,i)=error(3);
+    error_10_cos(1,i)=error(1);
+    error_20_cos(1,i)=error(2);
+    error_30_cos(1,i)=error(3);
 end
+
+figure,plot(smeg,error_30), title('error rate v sigma for the trurncated sinc at 10Hz')
+xlabel('sigma')
+ylabel('error rate')
+
+
+figure,plot(smeg,error_30_cos), title('error rate v sigma for the raised cos at 10Hz')
+xlabel('sigma')
+ylabel('error rate')
 
 %%
 function [message_out,error_rate] = communication(pt,message1,pt2,message2,pt3,message3,sigma)
